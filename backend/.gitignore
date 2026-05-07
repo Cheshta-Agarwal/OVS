@@ -1,16 +1,11 @@
-# Python environment
-venv/
-env/
+# Python
 __pycache__/
+venv/
 *.pyc
+
+# Secrets & Config
+.env
 
 # Database
 *.db
 *.sqlite3
-
-# Environment variables (Sensitive data)
-.env
-
-# System files
-.DS_Store
-Thumbs.db

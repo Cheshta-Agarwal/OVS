@@ -1,16 +1,26 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+from typing import List
+
 import models
-from database import engine
+import schemas # This uses the schemas we made earlier
+from database import engine, get_db
 
 app = FastAPI()
 
-# This "startup" event runs as soon as you start the server
 @app.on_event("startup")
 async def startup():
     async with engine.begin() as conn:
-        # This line looks at models.py and creates the tables if they don't exist
         await conn.run_sync(models.Base.metadata.create_all)
 
 @app.get("/")
 async def root():
-    return {"message": "Voting System Backend is Online and Tables are Created!"}
+    return {"message": "Backend is Online"}
+
+# NEW ROUTE: This is what Member A (Frontend) will call
+@app.get("/candidates", response_model=List[schemas.CandidateResponse])
+async def get_candidates(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(models.Candidate))
+    candidates = result.scalars().all()
+    return candidates

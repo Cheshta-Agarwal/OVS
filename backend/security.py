@@ -2,7 +2,7 @@ from passlib.context import CryptContext
 import jwt
 from datetime import datetime,timedelta
 
-pwd_context=CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context=CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__min_rounds=12)
 
 #Secret configuration
 SECRET_KEY="ADD SECURITY KEY FROM .ENV FILE LATER"

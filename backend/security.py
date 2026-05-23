@@ -28,4 +28,3 @@ def create_access_token(data:dict) ->str:
     expire=datetime.utcnow() +timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp":expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-

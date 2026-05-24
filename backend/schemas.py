@@ -37,3 +37,12 @@ class VoteResult(BaseModel):
     candidate_id: int
     candidate_name: str
     vote_count: int
+
+class CandidateResult(BaseModel):
+    id: int
+    name: str
+    party: str
+    vote_count: int
+
+    class Config:
+        from_attributes =True

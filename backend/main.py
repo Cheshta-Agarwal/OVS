@@ -1,14 +1,13 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List
+from sqlalchemy import func
+import security
 
 import models
 import schemas # This uses the schemas we made earlier
 from database import engine, get_db
-
-from fastapi import HTTPException, status
-import security
 
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 import jwt
@@ -79,6 +78,7 @@ async def login_user(
     
     return {"access_token": access_token, "token_type": "bearer"}
 
+# Define the security scheme
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession= Depends(get_db)):
@@ -131,3 +131,25 @@ async def cast_vote(vote_data: schemas.VoteCreate,
     #Note: we are not adding user_id to vote table for letting vote be anonymous.
     return {"message": "Vote casted successfully! Thank you for participating."}
 
+#GET /results - publicly readable live dashboard results
+@app.get("/results", response_model=List[schemas.CandidateResult])
+async def get_results(db: AsyncSession = Depends(get_db)):
+    #Query candidate and count their associated votes using an outer join to include candidates with zero votes
+    query=(select(models.Candidate.id,
+                  models.Candidate.name,
+                  models.Candidate.party,
+                  func.count(models.Vote.id).label("vote_count")
+                  )
+                  .outerjoin(models.Vote, models.Candidate.id == models.Vote.candidate_id)
+                  .group_by(models.Candidate.id)
+                  .order_by(func.count(models.Vote.id).desc()) #highest vote on top
+
+    )
+    result =await db.execute(query)
+
+    # Map raw rows directly into a dictionary format matching our schema
+    results_list =[]
+    for row in result:
+        results_list.append({"id":row[0], "name":row[1], 
+                             "party":row[2], "vote_count":row[3]})
+    return results_list

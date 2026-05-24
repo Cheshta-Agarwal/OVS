@@ -2,8 +2,13 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 # 1. Define the Database URL
+import os
+from dotenv import load_dotenv
+
+load_dotenv() # Loads the variables from .env
 # This will create a file named 'voting.db' in your backend folder.
-DATABASE_URL = "sqlite+aiosqlite:///./voting.db"
+# Fallback to the local string if the environment variable isn't found
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./voting.db")
 
 # 2. Create the Async Engine
 # echo=True allows you to see the SQL queries in your terminal (great for debugging!)

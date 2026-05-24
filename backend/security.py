@@ -4,10 +4,14 @@ from datetime import datetime,timedelta
 
 pwd_context=CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__min_rounds=12)
 
-#Secret configuration
-SECRET_KEY="ADD SECURITY KEY FROM .ENV FILE LATER"
-ALGORITHM="HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES= 30
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback_temporary_secret_key")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
 def hash_password(password:str) ->str :
     return pwd_context.hash(password)

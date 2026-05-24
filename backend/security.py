@@ -13,6 +13,10 @@ SECRET_KEY = os.getenv("SECRET_KEY", "fallback_temporary_secret_key")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
+# CRITICAL SECURITY CHECK: If the key isn't found, stop the server immediately
+if not SECRET_KEY:
+    raise RuntimeError("CRITICAL ERROR: 'SECRET_KEY' environment variable is missing in .env file!")
+
 def hash_password(password:str) ->str :
     return pwd_context.hash(password)
 

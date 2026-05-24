@@ -33,9 +33,9 @@ def seed():
                 new_cand = Candidate(name=cand["name"], party=cand["party"])
                 db.add(new_cand)
         db.commit()
-        print("✅ Candidates seeded successfully!")
+        print(" Candidates seeded successfully!")
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
     finally:
         db.close()
 

@@ -10,6 +10,8 @@ from database import engine, get_db
 from fastapi import HTTPException, status
 import security
 
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+import jwt
 
 app = FastAPI()
 
@@ -56,13 +58,16 @@ async def register_user(user_data: schemas.UserCreate, db: AsyncSession = Depend
 
 # 2. USER LOGIN ROUTE (Returns JWT Token)
 @app.post("/login")
-async def login_user(user_data: schemas.UserCreate, db: AsyncSession = Depends(get_db)):
-    # Find user by username
-    result = await db.execute(select(models.User).filter(models.User.username == user_data.username))
+async def login_user(
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    db: AsyncSession = Depends(get_db)
+):
+    # Find user by username (we use form_data.username instead of user_data.username)
+    result = await db.execute(select(models.User).filter(models.User.username == form_data.username))
     user = result.scalars().first()
     
     # Verify user exists and password matches
-    if not user or not security.verify_password(user_data.password, user.hashed_password):
+    if not user or not security.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Invalid credentials"
@@ -73,3 +78,56 @@ async def login_user(user_data: schemas.UserCreate, db: AsyncSession = Depends(g
     access_token = security.create_access_token(data=token_data)
     
     return {"access_token": access_token, "token_type": "bearer"}
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession= Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    try:
+        # Decode the token using the secret key from your .env
+        payload= jwt.decode(token,security.SECRET_KEY, algorithms= [security.ALGORITHM])
+        username: str =payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except jwt.PyJWTError:
+        raise credentials_exception
+    
+    result= await db.execute(select(models.User).filter(models.User.username == username))
+    user = result.scalars().first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+@app.post("/vote", status_code = status.HTTP_200_OK)
+async def cast_vote(vote_data: schemas.VoteCreate,
+                    current_user:models.User = Depends(get_current_user),
+                    db: AsyncSession = Depends(get_db)):
+    #check if user has already casted vote
+    if current_user.has_voted:
+        raise HTTPException(
+            status_code =status.HTTP_400_BAD_REQUEST,
+            detail="You have already voted!!",
+        )
+    
+    #check if cadidate existed
+    result = await db.execute(select(models.Candidate).filter(models.Candidate.id == vote_data.candidate_id))
+    candidate = result.scalars().first()
+    if not candidate:
+        raise HTTPException(
+            status_code =status.HTTP_404_NOT_FOUND,
+            detail="candidate not found!!",
+        )
+    
+    #record the vote casted by user
+    new_vote= models.Vote(candidate_id=vote_data.candidate_id)
+    db.add(new_vote)
+    current_user.has_voted = True
+    await db.commit()
+    #Note: we are not adding user_id to vote table for letting vote be anonymous.
+    return {"message": "Vote casted successfully! Thank you for participating."}
+

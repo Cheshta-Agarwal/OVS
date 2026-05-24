@@ -12,7 +12,25 @@ from database import engine, get_db
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 import jwt
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+# List the exact origins (URLs) allowed to talk to your backend
+origins = [
+    "http://localhost:5173",  # Typical Vite/React local server URL
+    "http://localhost:3000",  # Typical Create-React-App local server URL
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,            # Allows requests from your frontend origins
+    allow_credentials=True,
+    allow_methods=["*"],              # Allows all HTTP methods (GET, POST, PUT, DELETE)
+    allow_headers=["*"],              # Allows all headers (including Authorization header!)
+)
+
 
 @app.on_event("startup")
 async def startup():

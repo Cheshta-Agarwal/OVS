@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -6,6 +7,7 @@ from sqlalchemy import func
 import security
 
 import models
+import seed_data
 import schemas # This uses the schemas we made earlier
 from database import engine, get_db
 
@@ -36,6 +38,7 @@ app.add_middleware(
 async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(models.Base.metadata.create_all)
+    await asyncio.to_thread(seed_data.seed)
 
 @app.get("/")
 async def root():
@@ -120,6 +123,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
     if user is None:
         raise credentials_exception
     return user
+
+
+@app.get("/me", response_model=schemas.UserResponse)
+async def read_current_user(current_user: models.User = Depends(get_current_user)):
+    return current_user
 
 @app.post("/vote", status_code = status.HTTP_200_OK)
 async def cast_vote(vote_data: schemas.VoteCreate,

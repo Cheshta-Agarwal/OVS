@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-import { castVote, getCandidates, getResults, loginUser, registerUser } from './api'
+import { castVote, getCandidates, getResults, loginUser, registerUser, getCurrentUser } from './api'
 
 const initialForm = { username: '', password: '' }
 
@@ -16,10 +16,37 @@ function App() {
   const [hasVoted, setHasVoted] = useState(false)
   const [status, setStatus] = useState({ type: '', message: '' })
 
+  const totalVotes = results.reduce((sum, item) => sum + (item.vote_count || 0), 0)
+  const maxVotes = Math.max(...results.map((item) => item.vote_count || 0), 1)
+
   useEffect(() => {
     loadCandidates()
     loadResults()
+    // If a token exists in localStorage, validate it and fetch user state
+    const init = async () => {
+      if (token) {
+        try {
+          const me = await getCurrentUser(token)
+          setUsername(me.username)
+          setHasVoted(me.has_voted)
+          setPage('vote')
+        } catch (err) {
+          // Token invalid or expired — clear local auth
+          setToken('')
+          setUsername('')
+          localStorage.removeItem('token')
+          localStorage.removeItem('username')
+        }
+      }
+    }
+    init()
   }, [])
+
+  useEffect(() => {
+    if (token && page === 'auth') {
+      setPage('vote')
+    }
+  }, [token, page])
 
   useEffect(() => {
     if (page === 'results' && token) {
@@ -63,9 +90,18 @@ function App() {
       if (authMode === 'login') {
         const data = await loginUser(form)
         setToken(data.access_token)
-        setUsername(form.username)
         localStorage.setItem('token', data.access_token)
-        localStorage.setItem('username', form.username)
+        // Fetch current user to get authoritative `has_voted` and username
+        try {
+          const me = await getCurrentUser(data.access_token)
+          setUsername(me.username)
+          setHasVoted(me.has_voted)
+          localStorage.setItem('username', me.username)
+        } catch (err) {
+          // Fallback to form username if /me fails
+          setUsername(form.username)
+          localStorage.setItem('username', form.username)
+        }
         setPage('vote')
         setStatus({ type: 'success', message: 'Login successful. You can now vote.' })
       } else {
@@ -117,21 +153,47 @@ function App() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div>
-          <p className="eyebrow">Online Voting System</p>
-          <h1>Secure vote collection for your team</h1>
-          <p className="subtitle">
-            React frontend connected to FastAPI backend. Login, vote, and follow results in one dashboard.
-          </p>
-        </div>
-        {token && (
-          <div className="header-actions">
-            <span>Signed in as <strong>{username}</strong></span>
-            <button className="button button-secondary" onClick={handleLogout}>
-              Log out
-            </button>
+        <div className="brand">
+          <div className="brand-logo">OV</div>
+          <div>
+            <p className="eyebrow">Online Voting Portal</p>
+            <h1>Secure vote collection for your team</h1>
+            <p className="subtitle">
+              Vote with confidence. Track live tallies, and make every ballot count for our community.
+            </p>
           </div>
-        )}
+        </div>
+        <img className="hero-illustration" src="/election-hero.svg" alt="Election icons" />
+
+        {token ? (
+          <div className="header-actions">
+            <div className="nav-tabs">
+              <button
+                className={`tab-button ${page === 'vote' ? 'active' : ''}`}
+                onClick={() => setPage('vote')}
+              >
+                Vote
+              </button>
+              <button
+                className={`tab-button ${page === 'results' ? 'active' : ''}`}
+                onClick={() => setPage('results')}
+              >
+                Results
+              </button>
+            </div>
+            <div className="user-actions">
+              <span>Signed in as <strong>{username}</strong></span>
+              <button className="button button-secondary button-icon" onClick={handleLogout} title="Log out">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 8v-2a2 2 0 0 0-2-2h-4" />
+                  <path d="M6 20h4a2 2 0 0 0 2-2v-2" />
+                  <path d="M10 14l4-4" />
+                  <path d="M14 14l-4-4" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        ) : null}
       </header>
 
       <main className="main-panel">
@@ -260,6 +322,7 @@ function App() {
           <div className={`status-message ${status.type}`}>{status.message}</div>
         )}
       </main>
+      <footer className="site-footer">Built with ♥ — Online Voting System</footer>
     </div>
   )
 }

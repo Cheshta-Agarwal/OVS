@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import './App.css'
-import { castVote, getCandidates, getResults, loginUser, registerUser, getCurrentUser } from './api'
+import Header from './components/Header'
+import AuthForm from './components/AuthForm'
+import VotePanel from './components/VotePanel'
+import ResultsPanel from './components/ResultsPanel'
+import { castVote, getCandidates, getResults, loginUser, registerUser, getCurrentUser, setAuthLogoutHandler } from './api'
 
 const initialForm = { username: '', password: '' }
 
@@ -16,12 +20,21 @@ function App() {
   const [hasVoted, setHasVoted] = useState(false)
   const [status, setStatus] = useState({ type: '', message: '' })
 
-  const totalVotes = results.reduce((sum, item) => sum + (item.vote_count || 0), 0)
-  const maxVotes = Math.max(...results.map((item) => item.vote_count || 0), 1)
-
   useEffect(() => {
     loadCandidates()
     loadResults()
+
+    // Register centralized logout handler to run on 401 from API
+    setAuthLogoutHandler(() => {
+      setStatus({ type: 'error', message: 'Session expired. Please log in again.' })
+      setToken('')
+      setUsername('')
+      setPage('auth')
+      setHasVoted(false)
+      localStorage.removeItem('token')
+      localStorage.removeItem('username')
+    })
+
     // If a token exists in localStorage, validate it and fetch user state
     const init = async () => {
       if (token) {
@@ -152,169 +165,31 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <div className="brand">
-          <div className="brand-logo">OV</div>
-          <div>
-            <p className="eyebrow">Online Voting Portal</p>
-            <h1>Secure vote collection for your team</h1>
-            <p className="subtitle">
-              Vote with confidence. Track live tallies, and make every ballot count for our community.
-            </p>
-          </div>
-        </div>
-        <img className="hero-illustration" src="/election-hero.svg" alt="Election icons" />
-
-        {token ? (
-          <div className="header-actions">
-            <div className="nav-tabs">
-              <button
-                className={`tab-button ${page === 'vote' ? 'active' : ''}`}
-                onClick={() => setPage('vote')}
-              >
-                Vote
-              </button>
-              <button
-                className={`tab-button ${page === 'results' ? 'active' : ''}`}
-                onClick={() => setPage('results')}
-              >
-                Results
-              </button>
-            </div>
-            <div className="user-actions">
-              <span>Signed in as <strong>{username}</strong></span>
-              <button className="button button-secondary button-icon" onClick={handleLogout} title="Log out">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 8v-2a2 2 0 0 0-2-2h-4" />
-                  <path d="M6 20h4a2 2 0 0 0 2-2v-2" />
-                  <path d="M10 14l4-4" />
-                  <path d="M14 14l-4-4" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </header>
+      <Header token={token} username={username} page={page} setPage={setPage} onLogout={handleLogout} />
 
       <main className="main-panel">
         {!token ? (
-          <section className="auth-panel">
-            <div className="panel-heading">
-              <h2>{authMode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
-              <button
-                className="button button-link"
-                onClick={() => {
-                  setAuthMode(authMode === 'login' ? 'register' : 'login')
-                  setStatus({ type: '', message: '' })
-                }}
-              >
-                {authMode === 'login' ? 'Need an account?' : 'Already have an account?'}
-              </button>
-            </div>
-
-            <form className="auth-form" onSubmit={handleAuthSubmit}>
-              <label>
-                Username
-                <input
-                  name="username"
-                  value={form.username}
-                  onChange={handleFormChange}
-                  placeholder="username"
-                  autoComplete="username"
-                />
-              </label>
-
-              <label>
-                Password
-                <input
-                  name="password"
-                  type="password"
-                  value={form.password}
-                  onChange={handleFormChange}
-                  placeholder="password"
-                  autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
-                />
-              </label>
-
-              <button className="button button-primary" type="submit">
-                {authMode === 'login' ? 'Login' : 'Register'}
-              </button>
-            </form>
-          </section>
+          <AuthForm
+            authMode={authMode}
+            form={form}
+            onFormChange={handleFormChange}
+            onSubmit={handleAuthSubmit}
+            toggleMode={() => {
+              setAuthMode(authMode === 'login' ? 'register' : 'login')
+              setStatus({ type: '', message: '' })
+            }}
+          />
         ) : (
           <section className="dashboard-grid">
-            <div className="panel vote-panel">
-              <div className="panel-heading">
-                <h2>Choose your candidate</h2>
-                <button className="button button-link" onClick={() => setPage('results')}>
-                  View results
-                </button>
-              </div>
-
-              {hasVoted && (
-                <div className="info-box">
-                  You have voted already. Results will update automatically.
-                </div>
-              )}
-
-              {candidates.length === 0 ? (
-                <p className="empty-state">No candidates available yet.</p>
-              ) : (
-                <div className="candidate-list">
-                  {candidates.map((candidate) => (
-                    <label key={candidate.id} className={`candidate-card ${selectedCandidate === candidate.id ? 'selected' : ''}`}>
-                      <input
-                        type="radio"
-                        name="candidate"
-                        value={candidate.id}
-                        checked={selectedCandidate === candidate.id}
-                        onChange={() => setSelectedCandidate(candidate.id)}
-                      />
-                      <div>
-                        <strong>{candidate.name}</strong>
-                        <span>{candidate.party}</span>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-
-              <button className="button button-primary" onClick={handleVote} disabled={!selectedCandidate || hasVoted}>
-                {hasVoted ? 'Vote recorded' : 'Submit vote'}
-              </button>
-            </div>
-
-            <aside className="panel results-panel">
-              <div className="panel-heading">
-                <h2>Live results</h2>
-                <button className="button button-link" onClick={() => setPage('results')}>
-                  Refresh results
-                </button>
-              </div>
-              <div className="results-list">
-                {results.length === 0 ? (
-                  <p className="empty-state">Results will appear after voting begins.</p>
-                ) : (
-                  results.map((item) => (
-                    <div key={item.id} className="result-row">
-                      <div>
-                        <strong>{item.name}</strong>
-                        <span>{item.party}</span>
-                      </div>
-                      <div className="result-meta">
-                        <span>{item.vote_count} votes</span>
-                        <div className="result-bar-bg">
-                          <div
-                            className="result-bar"
-                            style={{ width: `${Math.min(100, item.vote_count * 10)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </aside>
+            <VotePanel
+              candidates={candidates}
+              selectedCandidate={selectedCandidate}
+              setSelectedCandidate={setSelectedCandidate}
+              handleVote={handleVote}
+              hasVoted={hasVoted}
+              setPage={setPage}
+            />
+            <ResultsPanel results={results} setPage={setPage} />
           </section>
         )}
 

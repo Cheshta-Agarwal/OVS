@@ -1,4 +1,4 @@
-export default function ResultsPanel({ results, setPage, onRefresh, disabled }) {
+export default function ResultsPanel({ results, onRefresh, disabled }) {
   const totalVotes = results.reduce((sum, item) => sum + item.vote_count, 0)
 
   return (

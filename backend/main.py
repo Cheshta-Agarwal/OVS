@@ -121,6 +121,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
         raise credentials_exception
     return user
 
+
+@app.get("/me", response_model=schemas.UserResponse)
+async def read_current_user(current_user: models.User = Depends(get_current_user)):
+    return current_user
+
 @app.post("/vote", status_code = status.HTTP_200_OK)
 async def cast_vote(vote_data: schemas.VoteCreate,
                     current_user:models.User = Depends(get_current_user),

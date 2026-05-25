@@ -1,5 +1,6 @@
 # Python
 __pycache__/
+keys/
 venv/
 *.pyc
 
@@ -9,3 +10,5 @@ venv/
 # Database
 *.db
 *.sqlite3
+retrieve queries.sql
+security_verification.py

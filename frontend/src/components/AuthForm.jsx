@@ -1,6 +1,6 @@
 export default function AuthForm({ authMode, form, onFormChange, onSubmit, toggleMode, disabled }) {
   return (
-    <section className="auth-panel">
+    <section className="auth-panel" aria-busy={disabled}>
       <div className="panel-heading">
         <h2>{authMode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
         <button className="button button-link" onClick={toggleMode} type="button" disabled={disabled}>

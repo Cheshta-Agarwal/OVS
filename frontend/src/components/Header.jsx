@@ -17,14 +17,14 @@ export default function Header({ token, username, onLogout }) {
 
       {token ? (
         <div className="header-actions">
-          <div className="nav-tabs">
+          <nav className="nav-tabs" aria-label="Primary navigation">
             <NavLink to="/vote" className={({ isActive }) => `tab-button ${isActive ? 'active' : ''}`}>
               Vote
             </NavLink>
             <NavLink to="/results" className={({ isActive }) => `tab-button ${isActive ? 'active' : ''}`}>
               Results
             </NavLink>
-          </div>
+          </nav>
           <div className="user-actions">
             <span>Signed in as <strong>{username}</strong></span>
             <button className="button button-secondary button-icon" onClick={onLogout} title="Log out" type="button">

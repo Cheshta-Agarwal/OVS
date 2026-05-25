@@ -4,6 +4,8 @@ from sqlalchemy.future import select
 from typing import List
 from sqlalchemy import func
 import security
+import hashlib
+from datetime import datetime
 
 import models
 import schemas # This uses the schemas we made earlier
@@ -148,6 +150,34 @@ async def cast_vote(vote_data: schemas.VoteCreate,
     await db.commit()
     #Note: we are not adding user_id to vote table for letting vote be anonymous.
     return {"message": "Vote casted successfully! Thank you for participating."}
+
+
+@app.post("/vote/encrypted", response_model=schemas.EncryptedVoteResponse, status_code=status.HTTP_201_CREATED)
+async def cast_encrypted_vote(
+    vote_data: schemas.EncryptedVoteCreate,
+    current_user: models.User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    # Prevent double voting using the user's has_voted flag (keeps votes anonymous)
+    if current_user.has_voted:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You have already voted!!")
+
+    # Store the ciphertext as an anonymous ballot
+    new_ballot = models.EncryptedBallot(ciphertext=vote_data.ciphertext)
+    db.add(new_ballot)
+
+    # Mark the user as having voted in the same transaction
+    current_user.has_voted = True
+
+    await db.commit()
+    # Refresh to get server-generated timestamp
+    await db.refresh(new_ballot)
+
+    # Create a non-linkable receipt: hash(ciphertext + timestamp)
+    ts_iso = new_ballot.timestamp.isoformat() if new_ballot.timestamp else datetime.utcnow().isoformat()
+    receipt = hashlib.sha256((vote_data.ciphertext + ts_iso).encode("utf-8")).hexdigest()
+
+    return {"receipt": receipt, "timestamp": new_ballot.timestamp}
 
 #GET /results - publicly readable live dashboard results
 @app.get("/results", response_model=List[schemas.CandidateResult])

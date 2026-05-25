@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Text
+from sqlalchemy.sql import func
 from database import Base
 
 class User(Base):
@@ -25,3 +26,11 @@ class Vote(Base):
     candidate_id = Column(Integer, ForeignKey("candidates.id"))
     
     # PRO-TIP: To keep votes anonymous, we do NOT link this table back to the User table.
+
+
+class EncryptedBallot(Base):
+    __tablename__ = "encrypted_ballots"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ciphertext = Column(Text, nullable=False)
+    timestamp = Column(DateTime, server_default=func.now(), nullable=False)

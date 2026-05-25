@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
+from datetime import datetime
 
 # --- USER SCHEMAS ---
 # This is what we expect when a user registers
@@ -37,6 +38,18 @@ class VoteResult(BaseModel):
     candidate_id: int
     candidate_name: str
     vote_count: int
+
+
+# --- ENCRYPTED VOTE SCHEMAS ---
+class EncryptedVoteCreate(BaseModel):
+    ciphertext: str
+
+
+class EncryptedVoteResponse(BaseModel):
+    receipt: str
+    timestamp: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 class CandidateResult(BaseModel):
     id: int

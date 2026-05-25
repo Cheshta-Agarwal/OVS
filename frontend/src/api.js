@@ -45,3 +45,4 @@ export const loginUser = (payload) =>
 export const castVote = (token, payload) =>
   request('/vote', { method: 'POST', token, body: payload })
 export const getResults = () => request('/results')
+export const getCurrentUser = (token) => request('/me', { token })

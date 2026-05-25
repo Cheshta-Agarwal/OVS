@@ -1,43 +1,45 @@
-import { NavLink } from 'react-router-dom'
+import React from 'react'
+import { Link } from 'react-router-dom'
 
 export default function Header({ token, username, onLogout }) {
   return (
     <header className="app-header">
-      <div className="brand">
-        <div className="brand-logo">OV</div>
-        <div>
-          <p className="eyebrow">Online Voting Portal</p>
-          <h1>Secure vote collection for your team</h1>
-          <p className="subtitle">
-            Vote with confidence. Track live tallies, and make every ballot count for our community.
-          </p>
-        </div>
+      <div className="header-content">
+        <Link to="/" className="brand">
+          <div className="brand-logo-container">
+            <div className="brand-logo">V</div>
+            <div className="indian-flag" title="Proudly Indian">
+              <div className="flag-saffron"></div>
+              <div className="flag-white">
+                <div className="ashoka-chakra"></div>
+              </div>
+              <div className="flag-green"></div>
+            </div>
+          </div>
+          <div className="brand-text">
+            <h1>IndiaVotes</h1>
+            <p className="subtitle">Secure • Transparent • Digital Democracy</p>
+          </div>
+        </Link>
       </div>
-      <img className="hero-illustration" src="/election-hero.svg" alt="Election icons" />
 
-      {token ? (
-        <div className="header-actions">
-          <nav className="nav-tabs" aria-label="Primary navigation">
-            <NavLink to="/vote" className={({ isActive }) => `tab-button ${isActive ? 'active' : ''}`}>
-              Vote
-            </NavLink>
-            <NavLink to="/results" className={({ isActive }) => `tab-button ${isActive ? 'active' : ''}`}>
-              Results
-            </NavLink>
-          </nav>
+      <div className="header-actions">
+        {token ? (
           <div className="user-actions">
-            <span>Signed in as <strong>{username}</strong></span>
-            <button className="button button-secondary button-icon" onClick={onLogout} title="Log out" aria-label="Log out" type="button">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8v-2a2 2 0 0 0-2-2h-4" />
-                <path d="M6 20h4a2 2 0 0 0 2-2v-2" />
-                <path d="M10 14l4-4" />
-                <path d="M14 14l-4-4" />
+            <span className="username-badge">Welcome, {username}</span>
+            <button onClick={onLogout} className="button button-secondary" title="Sign Out">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
               </svg>
+              Logout
             </button>
           </div>
-        </div>
-      ) : null}
+        ) : (
+          <div className="header-badge">E-Voting Portal</div>
+        )}
+      </div>
     </header>
   )
 }

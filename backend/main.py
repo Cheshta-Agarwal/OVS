@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
@@ -6,6 +7,7 @@ from sqlalchemy import func
 import security
 
 import models
+import seed_data
 import schemas # This uses the schemas we made earlier
 from database import engine, get_db
 
@@ -36,6 +38,7 @@ app.add_middleware(
 async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(models.Base.metadata.create_all)
+    await asyncio.to_thread(seed_data.seed)
 
 @app.get("/")
 async def root():

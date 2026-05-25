@@ -22,6 +22,9 @@ function App() {
   const [hasVoted, setHasVoted] = useState(false)
   const [status, setStatus] = useState({ type: '', message: '' })
   const [isBusy, setIsBusy] = useState(false)
+  const [isLoadingCandidates, setIsLoadingCandidates] = useState(false)
+  const [isLoadingResults, setIsLoadingResults] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
 
   const activePath = location.pathname === '/results' ? 'results' : 'vote'
 
@@ -56,6 +59,7 @@ function App() {
           localStorage.removeItem('username')
         }
       }
+      setIsInitializing(false)
     }
     init()
   }, [])
@@ -68,20 +72,26 @@ function App() {
   }, [activePath, token])
 
   const loadCandidates = async () => {
+    setIsLoadingCandidates(true)
     try {
       const data = await getCandidates()
       setCandidates(data)
     } catch (error) {
       setStatus({ type: 'error', message: `Unable to load candidates: ${error.message}` })
+    } finally {
+      setIsLoadingCandidates(false)
     }
   }
 
   const loadResults = async () => {
+    setIsLoadingResults(true)
     try {
       const data = await getResults()
       setResults(data)
     } catch (error) {
-      console.error('Results error', error)
+      setStatus({ type: 'error', message: `Unable to load results: ${error.message}` })
+    } finally {
+      setIsLoadingResults(false)
     }
   }
 
@@ -175,74 +185,92 @@ function App() {
       <Header token={token} username={username} onLogout={handleLogout} />
 
       <main className="main-panel">
-        <Routes>
-          <Route
-            path="/"
-            element={
-              !token ? (
-                <AuthForm
-                  authMode={authMode}
-                  form={form}
-                  onFormChange={handleFormChange}
-                  onSubmit={handleAuthSubmit}
-                  toggleMode={() => {
-                    setAuthMode(authMode === 'login' ? 'register' : 'login')
-                    setStatus({ type: '', message: '' })
-                  }}
-                  disabled={isBusy}
-                />
-              ) : (
-                <Navigate to={hasVoted ? '/results' : '/vote'} replace />
-              )
-            }
-          />
-          <Route
-            path="/vote"
-            element={
-              token ? (
-                <section className="dashboard-grid">
-                  <VotePanel
-                    candidates={candidates}
-                    selectedCandidate={selectedCandidate}
-                    setSelectedCandidate={setSelectedCandidate}
-                    handleVote={handleVote}
-                    hasVoted={hasVoted}
-                    onViewResults={() => navigate('/results')}
-                    disabled={isBusy}
-                  />
-                  <ResultsPanel results={results} onRefresh={loadResults} disabled={isBusy} />
-                </section>
-              ) : (
-                <Navigate to="/" replace />
-              )
-            }
-          />
-          <Route
-            path="/results"
-            element={
-              token ? (
-                <section className="dashboard-grid">
-                  <VotePanel
-                    candidates={candidates}
-                    selectedCandidate={selectedCandidate}
-                    setSelectedCandidate={setSelectedCandidate}
-                    handleVote={handleVote}
-                    hasVoted={hasVoted}
-                    onViewResults={() => navigate('/results')}
-                    disabled={isBusy}
-                  />
-                  <ResultsPanel results={results} onRefresh={loadResults} disabled={isBusy} />
-                </section>
-              ) : (
-                <Navigate to="/" replace />
-              )
-            }
-          />
-          <Route
-            path="*"
-            element={<Navigate to={token ? (hasVoted ? '/results' : '/vote') : '/'} replace />}
-          />
-        </Routes>
+        {isInitializing ? (
+          <div className="panel">
+            <p className="empty-state">Restoring session and loading your voting data…</p>
+          </div>
+        ) : (
+          <>
+            {token && (
+              <div className="nav-tabs-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                <div className="nav-tabs">
+                  <button 
+                    onClick={() => navigate('/vote')} 
+                    className={`tab-button ${activePath === 'vote' ? 'active' : ''}`}
+                  >
+                    Ballot
+                  </button>
+                  <button 
+                    onClick={() => navigate('/results')} 
+                    className={`tab-button ${activePath === 'results' ? 'active' : ''}`}
+                  >
+                    Live Results
+                  </button>
+                </div>
+              </div>
+            )}
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  !token ? (
+                    <AuthForm
+                      authMode={authMode}
+                      form={form}
+                      onFormChange={handleFormChange}
+                      onSubmit={handleAuthSubmit}
+                      toggleMode={() => {
+                        setAuthMode(authMode === 'login' ? 'register' : 'login')
+                        setStatus({ type: '', message: '' })
+                      }}
+                      disabled={isBusy}
+                    />
+                  ) : (
+                    <Navigate to={hasVoted ? '/results' : '/vote'} replace />
+                  )
+                }
+              />
+              <Route
+                path="/vote"
+                element={
+                  token ? (
+                    <VotePanel
+                      candidates={candidates}
+                      selectedCandidate={selectedCandidate}
+                      setSelectedCandidate={setSelectedCandidate}
+                      handleVote={handleVote}
+                      hasVoted={hasVoted}
+                      onViewResults={() => navigate('/results')}
+                      disabled={isBusy || isLoadingCandidates}
+                      isLoading={isLoadingCandidates}
+                    />
+                  ) : (
+                    <Navigate to="/" replace />
+                  )
+                }
+              />
+              <Route
+                path="/results"
+                element={
+                  token ? (
+                    <ResultsPanel
+                      results={results}
+                      onRefresh={loadResults}
+                      disabled={isBusy}
+                      isLoading={isLoadingResults}
+                    />
+                  ) : (
+                    <Navigate to="/" replace />
+                  )
+                }
+              />
+              <Route
+                path="*"
+                element={<Navigate to={token ? (hasVoted ? '/results' : '/vote') : '/'} replace />}
+              />
+            </Routes>
+          </>
+        )}
 
         {status.message && (
           <div className={`status-message ${status.type}`} role="status" aria-live="polite">
@@ -250,7 +278,7 @@ function App() {
           </div>
         )}
       </main>
-      <footer className="site-footer">Built with ♥ — Online Voting System</footer>
+      <footer className="site-footer">Built with ♥ for Indian Digital Democracy</footer>
     </div>
   )
 }

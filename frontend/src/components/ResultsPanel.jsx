@@ -1,9 +1,9 @@
-export default function ResultsPanel({ results, setPage }) {
+export default function ResultsPanel({ results, setPage, onRefresh, disabled }) {
   return (
     <aside className="panel results-panel">
       <div className="panel-heading">
         <h2>Live results</h2>
-        <button className="button button-link" onClick={() => setPage('results')}>
+        <button className="button button-link" onClick={onRefresh} type="button" disabled={disabled}>
           Refresh results
         </button>
       </div>

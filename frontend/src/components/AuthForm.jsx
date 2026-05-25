@@ -1,9 +1,9 @@
-export default function AuthForm({ authMode, form, onFormChange, onSubmit, toggleMode }) {
+export default function AuthForm({ authMode, form, onFormChange, onSubmit, toggleMode, disabled }) {
   return (
     <section className="auth-panel">
       <div className="panel-heading">
         <h2>{authMode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
-        <button className="button button-link" onClick={toggleMode} type="button">
+        <button className="button button-link" onClick={toggleMode} type="button" disabled={disabled}>
           {authMode === 'login' ? 'Need an account?' : 'Already have an account?'}
         </button>
       </div>
@@ -17,6 +17,7 @@ export default function AuthForm({ authMode, form, onFormChange, onSubmit, toggl
             onChange={onFormChange}
             placeholder="username"
             autoComplete="username"
+            disabled={disabled}
           />
         </label>
 
@@ -29,10 +30,11 @@ export default function AuthForm({ authMode, form, onFormChange, onSubmit, toggl
             onChange={onFormChange}
             placeholder="password"
             autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+            disabled={disabled}
           />
         </label>
 
-        <button className="button button-primary" type="submit">
+        <button className="button button-primary" type="submit" disabled={disabled}>
           {authMode === 'login' ? 'Login' : 'Register'}
         </button>
       </form>

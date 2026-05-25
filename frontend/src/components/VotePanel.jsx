@@ -1,9 +1,9 @@
-export default function VotePanel({ candidates, selectedCandidate, setSelectedCandidate, handleVote, hasVoted, setPage }) {
+export default function VotePanel({ candidates, selectedCandidate, setSelectedCandidate, handleVote, hasVoted, onViewResults, disabled }) {
   return (
     <div className="panel vote-panel">
       <div className="panel-heading">
         <h2>Choose your candidate</h2>
-        <button className="button button-link" onClick={() => setPage('results')}>
+        <button className="button button-link" onClick={onViewResults} type="button" disabled={disabled}>
           View results
         </button>
       </div>
@@ -19,13 +19,17 @@ export default function VotePanel({ candidates, selectedCandidate, setSelectedCa
       ) : (
         <div className="candidate-list">
           {candidates.map((candidate) => (
-            <label key={candidate.id} className={`candidate-card ${selectedCandidate === candidate.id ? 'selected' : ''}`}>
+            <label
+              key={candidate.id}
+              className={`candidate-card ${selectedCandidate === candidate.id ? 'selected' : ''}`}
+            >
               <input
                 type="radio"
                 name="candidate"
                 value={candidate.id}
                 checked={selectedCandidate === candidate.id}
                 onChange={() => setSelectedCandidate(candidate.id)}
+                disabled={disabled || hasVoted}
               />
               <div>
                 <strong>{candidate.name}</strong>
@@ -36,7 +40,7 @@ export default function VotePanel({ candidates, selectedCandidate, setSelectedCa
         </div>
       )}
 
-      <button className="button button-primary" onClick={handleVote} disabled={!selectedCandidate || hasVoted}>
+      <button className="button button-primary" onClick={handleVote} disabled={!selectedCandidate || hasVoted || disabled}>
         {hasVoted ? 'Vote recorded' : 'Submit vote'}
       </button>
     </div>

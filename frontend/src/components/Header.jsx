@@ -1,4 +1,6 @@
-export default function Header({ token, username, page, setPage, onLogout }) {
+import { NavLink } from 'react-router-dom'
+
+export default function Header({ token, username, onLogout }) {
   return (
     <header className="app-header">
       <div className="brand">
@@ -16,16 +18,16 @@ export default function Header({ token, username, page, setPage, onLogout }) {
       {token ? (
         <div className="header-actions">
           <div className="nav-tabs">
-            <button className={`tab-button ${page === 'vote' ? 'active' : ''}`} onClick={() => setPage('vote')}>
+            <NavLink to="/vote" className={({ isActive }) => `tab-button ${isActive ? 'active' : ''}`}>
               Vote
-            </button>
-            <button className={`tab-button ${page === 'results' ? 'active' : ''}`} onClick={() => setPage('results')}>
+            </NavLink>
+            <NavLink to="/results" className={({ isActive }) => `tab-button ${isActive ? 'active' : ''}`}>
               Results
-            </button>
+            </NavLink>
           </div>
           <div className="user-actions">
             <span>Signed in as <strong>{username}</strong></span>
-            <button className="button button-secondary button-icon" onClick={onLogout} title="Log out">
+            <button className="button button-secondary button-icon" onClick={onLogout} title="Log out" type="button">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8v-2a2 2 0 0 0-2-2h-4" />
                 <path d="M6 20h4a2 2 0 0 0 2-2v-2" />

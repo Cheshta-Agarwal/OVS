@@ -1,5 +1,11 @@
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://127.0.0.1:8000'
 
+let _onAuthLogout = null
+
+export function setAuthLogoutHandler(fn) {
+  _onAuthLogout = fn
+}
+
 async function request(path, options = {}) {
   const url = `${API_BASE}${path}`
   const opts = {
@@ -26,6 +32,18 @@ async function request(path, options = {}) {
   const response = await fetch(url, opts)
   const text = await response.text()
   const data = text ? JSON.parse(text) : null
+
+  // Centralized 401 handling: call registered logout handler if present
+  if (response.status === 401) {
+    if (typeof _onAuthLogout === 'function') {
+      try {
+        _onAuthLogout()
+      } catch (e) {
+        // swallow errors from handler
+      }
+    }
+    throw new Error(data?.detail || data?.message || 'Unauthorized')
+  }
 
   if (!response.ok) {
     throw new Error(data?.detail || data?.message || response.statusText || 'Request failed')

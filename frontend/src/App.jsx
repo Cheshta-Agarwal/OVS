@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import './App.css'
 import Header from './components/Header'
 import AuthForm from './components/AuthForm'
@@ -9,7 +10,8 @@ import { castVote, getCandidates, getResults, loginUser, registerUser, getCurren
 const initialForm = { username: '', password: '' }
 
 function App() {
-  const [page, setPage] = useState('auth')
+  const navigate = useNavigate()
+  const location = useLocation()
   const [authMode, setAuthMode] = useState('login')
   const [form, setForm] = useState(initialForm)
   const [token, setToken] = useState(() => localStorage.getItem('token') || '')
@@ -19,6 +21,9 @@ function App() {
   const [selectedCandidate, setSelectedCandidate] = useState(null)
   const [hasVoted, setHasVoted] = useState(false)
   const [status, setStatus] = useState({ type: '', message: '' })
+  const [isBusy, setIsBusy] = useState(false)
+
+  const activePath = location.pathname === '/results' ? 'results' : 'vote'
 
   useEffect(() => {
     loadCandidates()
@@ -29,10 +34,10 @@ function App() {
       setStatus({ type: 'error', message: 'Session expired. Please log in again.' })
       setToken('')
       setUsername('')
-      setPage('auth')
       setHasVoted(false)
       localStorage.removeItem('token')
       localStorage.removeItem('username')
+      navigate('/')
     })
 
     // If a token exists in localStorage, validate it and fetch user state
@@ -42,7 +47,7 @@ function App() {
           const me = await getCurrentUser(token)
           setUsername(me.username)
           setHasVoted(me.has_voted)
-          setPage('vote')
+          navigate(me.has_voted ? '/results' : '/vote')
         } catch (err) {
           // Token invalid or expired — clear local auth
           setToken('')
@@ -56,17 +61,11 @@ function App() {
   }, [])
 
   useEffect(() => {
-    if (token && page === 'auth') {
-      setPage('vote')
-    }
-  }, [token, page])
-
-  useEffect(() => {
-    if (page === 'results' && token) {
+    if (activePath === 'results' && token) {
       const interval = setInterval(loadResults, 5000)
       return () => clearInterval(interval)
     }
-  }, [page, token])
+  }, [activePath, token])
 
   const loadCandidates = async () => {
     try {
@@ -97,6 +96,7 @@ function App() {
       return
     }
 
+    setIsBusy(true)
     setStatus({ type: 'loading', message: authMode === 'login' ? 'Signing in...' : 'Creating account...' })
 
     try {
@@ -110,12 +110,13 @@ function App() {
           setUsername(me.username)
           setHasVoted(me.has_voted)
           localStorage.setItem('username', me.username)
+          navigate(me.has_voted ? '/results' : '/vote')
         } catch (err) {
-          // Fallback to form username if /me fails
           setUsername(form.username)
+          setHasVoted(false)
           localStorage.setItem('username', form.username)
+          navigate('/vote')
         }
-        setPage('vote')
         setStatus({ type: 'success', message: 'Login successful. You can now vote.' })
       } else {
         await registerUser(form)
@@ -125,6 +126,8 @@ function App() {
       setForm(initialForm)
     } catch (error) {
       setStatus({ type: 'error', message: error.message })
+    } finally {
+      setIsBusy(false)
     }
   }
 
@@ -138,63 +141,113 @@ function App() {
       return
     }
 
+    setIsBusy(true)
     setStatus({ type: 'loading', message: 'Submitting vote...' })
 
     try {
       await castVote(token, { candidate_id: selectedCandidate })
       setHasVoted(true)
       setStatus({ type: 'success', message: 'Your vote is recorded. Thank you!' })
-      loadResults()
-      setPage('results')
+      await loadResults()
+      navigate('/results')
     } catch (error) {
       setStatus({ type: 'error', message: error.message })
+    } finally {
+      setIsBusy(false)
     }
   }
 
   const handleLogout = () => {
     setToken('')
     setUsername('')
-    setPage('auth')
     setHasVoted(false)
     setSelectedCandidate(null)
     setForm(initialForm)
     setStatus({ type: '', message: '' })
+    setIsBusy(false)
     localStorage.removeItem('token')
     localStorage.removeItem('username')
+    navigate('/')
   }
 
   return (
     <div className="app-shell">
-      <Header token={token} username={username} page={page} setPage={setPage} onLogout={handleLogout} />
+      <Header token={token} username={username} onLogout={handleLogout} />
 
       <main className="main-panel">
-        {!token ? (
-          <AuthForm
-            authMode={authMode}
-            form={form}
-            onFormChange={handleFormChange}
-            onSubmit={handleAuthSubmit}
-            toggleMode={() => {
-              setAuthMode(authMode === 'login' ? 'register' : 'login')
-              setStatus({ type: '', message: '' })
-            }}
+        <Routes>
+          <Route
+            path="/"
+            element={
+              !token ? (
+                <AuthForm
+                  authMode={authMode}
+                  form={form}
+                  onFormChange={handleFormChange}
+                  onSubmit={handleAuthSubmit}
+                  toggleMode={() => {
+                    setAuthMode(authMode === 'login' ? 'register' : 'login')
+                    setStatus({ type: '', message: '' })
+                  }}
+                  disabled={isBusy}
+                />
+              ) : (
+                <Navigate to={hasVoted ? '/results' : '/vote'} replace />
+              )
+            }
           />
-        ) : (
-          <section className="dashboard-grid">
-            <VotePanel
-              candidates={candidates}
-              selectedCandidate={selectedCandidate}
-              setSelectedCandidate={setSelectedCandidate}
-              handleVote={handleVote}
-              hasVoted={hasVoted}
-              setPage={setPage}
-            />
-            <ResultsPanel results={results} setPage={setPage} />
-          </section>
-        )}
+          <Route
+            path="/vote"
+            element={
+              token ? (
+                <section className="dashboard-grid">
+                  <VotePanel
+                    candidates={candidates}
+                    selectedCandidate={selectedCandidate}
+                    setSelectedCandidate={setSelectedCandidate}
+                    handleVote={handleVote}
+                    hasVoted={hasVoted}
+                    onViewResults={() => navigate('/results')}
+                    disabled={isBusy}
+                  />
+                  <ResultsPanel results={results} onRefresh={loadResults} disabled={isBusy} />
+                </section>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="/results"
+            element={
+              token ? (
+                <section className="dashboard-grid">
+                  <VotePanel
+                    candidates={candidates}
+                    selectedCandidate={selectedCandidate}
+                    setSelectedCandidate={setSelectedCandidate}
+                    handleVote={handleVote}
+                    hasVoted={hasVoted}
+                    onViewResults={() => navigate('/results')}
+                    disabled={isBusy}
+                  />
+                  <ResultsPanel results={results} onRefresh={loadResults} disabled={isBusy} />
+                </section>
+              ) : (
+                <Navigate to="/" replace />
+              )
+            }
+          />
+          <Route
+            path="*"
+            element={<Navigate to={token ? (hasVoted ? '/results' : '/vote') : '/'} replace />}
+          />
+        </Routes>
 
         {status.message && (
-          <div className={`status-message ${status.type}`}>{status.message}</div>
+          <div className={`status-message ${status.type}`} role="status" aria-live="polite">
+            {status.message}
+          </div>
         )}
       </main>
       <footer className="site-footer">Built with ♥ — Online Voting System</footer>

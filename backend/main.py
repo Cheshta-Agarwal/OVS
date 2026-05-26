@@ -19,10 +19,11 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI()
 # List the exact origins (URLs) allowed to talk to your backend
 origins = [
-    "http://localhost:5173",  # Typical Vite/React local server URL
-    "http://localhost:3000",  # Typical Create-React-App local server URL
+    "http://localhost:5173",
+    "http://localhost:3000",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
+    "http://13.60.220.173",  # Your AWS Server IP
 ]
 
 app.add_middleware(

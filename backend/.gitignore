@@ -10,5 +10,5 @@ venv/
 # Database
 *.db
 *.sqlite3
-retrieve queries.sql
+# retrieve queries.sql
 # security_verification.py

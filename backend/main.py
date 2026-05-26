@@ -28,10 +28,10 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,            # Allows requests from your frontend origins
+    allow_origins=["http://13.60.220.173", "http://13.60.220.173:80", "http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
-    allow_methods=["*"],              # Allows all HTTP methods (GET, POST, PUT, DELETE)
-    allow_headers=["*"],              # Allows all headers (including Authorization header!)
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
